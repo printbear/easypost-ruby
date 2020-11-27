@@ -46,8 +46,8 @@ describe EasyPost do
     it 'stores the http_body on the error' do
       expect { described_class.make_request("get", "/health/boom", nil) }.to raise_error(EasyPost::Error) { |error|
         expect(error.http_body).to eq(
-          '{"error":{"code":"INTERNAL_SERVER_ERROR","message":"We\'re sorry, something went wrong. If the problem persists please contact Support.","errors":[]}}',
-        )
+                                     '{"error":{"code":"INTERNAL_SERVER_ERROR","message":"We\'re sorry, something went wrong. If the problem persists please contact Support.","errors":[]}}',
+                                     )
       }
     end
 
@@ -58,7 +58,7 @@ describe EasyPost do
         "NOT_FOUND",
         [],
         anything,
-      )
+        )
     end
 
     it "raises errors for 500s" do
@@ -68,7 +68,25 @@ describe EasyPost do
         "INTERNAL_SERVER_ERROR",
         [],
         anything,
-      )
+        )
+    end
+
+    it "reuses http client" do
+      client_1 = described_class.make_client("/health/ok")
+      client_2 = described_class.make_client("/health/ok")
+      expect(client_1.equal?(client_2)).to be_truthy
+    end
+
+    context 'when persistence is disabled' do
+      before do
+        EasyPost::PersistentHttpClient::HttpConfig.persistent_connection = false
+      end
+
+      it "uses a new http client for each request" do
+        client_1 = described_class.make_client("/health/ok")
+        client_2 = described_class.make_client("/health/ok")
+        expect(client_1.equal?(client_2)).to be_falsey
+      end
     end
   end
 end
